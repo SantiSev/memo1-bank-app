@@ -1,6 +1,7 @@
 package com.aninfo.integration.cucumber;
 
 import com.aninfo.Memo1BankApp;
+import com.aninfo.Request.AccountRequest;
 import com.aninfo.model.Account;
 import com.aninfo.service.AccountService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +16,7 @@ public class AccountIntegrationServiceTest {
     AccountService accountService;
 
     Account createAccount(Double balance) {
-        return accountService.createAccount(new Account(balance));
+        return accountService.createAccount(balance);
     }
 
     Account withdraw(Account account, Double sum) {

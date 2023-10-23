@@ -1,8 +1,13 @@
 package com.aninfo.service;
 
+import com.aninfo.Enums.ExceptionMessages;
+import com.aninfo.Enums.TransactionTypes;
+import com.aninfo.exceptions.AccountNotFoundException;
 import com.aninfo.exceptions.DepositNegativeSumException;
 import com.aninfo.exceptions.InsufficientFundsException;
+import com.aninfo.exceptions.WithdrawNegativeSumException;
 import com.aninfo.model.Account;
+import com.aninfo.model.Transaction;
 import com.aninfo.repository.AccountRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,7 +22,14 @@ public class AccountService {
     @Autowired
     private AccountRepository accountRepository;
 
-    public Account createAccount(Account account) {
+    @Autowired
+    private TransactionService transactionService;
+
+    public Account createAccount(double balance) {
+        if (balance < 0) {
+            throw new WithdrawNegativeSumException(ExceptionMessages.WithdrawNegativeSum.getExceptionMessage());
+        }
+        Account account = new Account(balance);
         return accountRepository.save(account);
     }
 
@@ -34,18 +46,27 @@ public class AccountService {
     }
 
     public void deleteById(Long cbu) {
-        accountRepository.deleteById(cbu);
+        try{accountRepository.deleteById(cbu);
+        }catch (Exception e){
+            throw new AccountNotFoundException(ExceptionMessages.AccountNotFound.getExceptionMessage());
+        }
     }
 
     @Transactional
     public Account withdraw(Long cbu, Double sum) {
         Account account = accountRepository.findAccountByCbu(cbu);
 
-        if (account.getBalance() < sum) {
-            throw new InsufficientFundsException("Insufficient funds");
+        if (sum <= 0) {
+            throw new WithdrawNegativeSumException(ExceptionMessages.WithdrawNegativeSum.getExceptionMessage());
+        }else if (account.getBalance() < sum) {
+            throw new InsufficientFundsException(ExceptionMessages.InsufficientFunds.getExceptionMessage());
         }
 
+        Transaction transaction = new Transaction(account, TransactionTypes.WITHDRAWAL, sum * -1);
+        account.getTransactions().add(transaction);
         account.setBalance(account.getBalance() - sum);
+
+        transactionService.save(transaction);
         accountRepository.save(account);
 
         return account;
@@ -55,14 +76,27 @@ public class AccountService {
     public Account deposit(Long cbu, Double sum) {
 
         if (sum <= 0) {
-            throw new DepositNegativeSumException("Cannot deposit negative sums");
+            throw new DepositNegativeSumException(ExceptionMessages.DepositNegativeSum.getExceptionMessage());
         }
 
         Account account = accountRepository.findAccountByCbu(cbu);
-        account.setBalance(account.getBalance() + sum);
+        account.setBalance(account.getBalance() + sum + bank_promo(sum));
+        Transaction transaction = new Transaction(account, TransactionTypes.DEPOSIT, sum);
+        account.getTransactions().add(transaction);
+
+
+        transactionService.save(transaction);
         accountRepository.save(account);
 
         return account;
+    }
+
+
+    private double bank_promo(double sum){
+        if (sum >= 2000){
+            return sum * 0.10;
+        }
+        return 0;
     }
 
 }

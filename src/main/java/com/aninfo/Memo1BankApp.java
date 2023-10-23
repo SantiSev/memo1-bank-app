@@ -1,7 +1,10 @@
 package com.aninfo;
 
+import com.aninfo.Request.AccountRequest;
 import com.aninfo.model.Account;
+import com.aninfo.model.Transaction;
 import com.aninfo.service.AccountService;
+import com.aninfo.service.TransactionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -26,6 +29,8 @@ public class Memo1BankApp {
 
 	@Autowired
 	private AccountService accountService;
+	@Autowired
+	private TransactionService transactionService;
 
 	public static void main(String[] args) {
 		SpringApplication.run(Memo1BankApp.class, args);
@@ -33,8 +38,8 @@ public class Memo1BankApp {
 
 	@PostMapping("/accounts")
 	@ResponseStatus(HttpStatus.CREATED)
-	public Account createAccount(@RequestBody Account account) {
-		return accountService.createAccount(account);
+	public Account createAccount(@RequestBody AccountRequest account) {
+		return accountService.createAccount(account.getBalance());
 	}
 
 	@GetMapping("/accounts")
@@ -46,6 +51,26 @@ public class Memo1BankApp {
 	public ResponseEntity<Account> getAccount(@PathVariable Long cbu) {
 		Optional<Account> accountOptional = accountService.findById(cbu);
 		return ResponseEntity.of(accountOptional);
+	}
+
+	@GetMapping("/transactions/account/{cbu}")
+	public Collection<Transaction> getAccountTransactions(@PathVariable Long cbu) {
+		Optional<Account> accountOptional = accountService.findById(cbu);
+		Collection<Transaction> transactions = transactionService.findAllByAccount(accountOptional);
+		return transactions;
+	}
+
+	@GetMapping("/transactions")
+	public Collection<Transaction> getTransactions() {
+		Collection<Transaction> transactions = transactionService.getTransactions();
+		return transactions;
+	}
+
+
+	@GetMapping("/transactions/{id}")
+	public ResponseEntity<Transaction> getTransactions(@PathVariable Long id) {
+		Optional<Transaction> transactionOptional = transactionService.findById(id);
+		return ResponseEntity.of(transactionOptional);
 	}
 
 	@PutMapping("/accounts/{cbu}")
@@ -63,6 +88,11 @@ public class Memo1BankApp {
 	@DeleteMapping("/accounts/{cbu}")
 	public void deleteAccount(@PathVariable Long cbu) {
 		accountService.deleteById(cbu);
+	}
+
+	@DeleteMapping("/transactions/{id}")
+	public void deleteTransaction(@PathVariable Long id) {
+		transactionService.deleteById(id);
 	}
 
 	@PutMapping("/accounts/{cbu}/withdraw")
